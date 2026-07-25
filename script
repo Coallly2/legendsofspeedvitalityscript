@@ -1,0 +1,673 @@
+--// Vitality Scripts v1 — Key System
+-- Execute in Roblox Studio Command Bar or Studio Console
+-- Game ID: 3101667897
+
+-- ==================== CONFIG ====================
+local VALID_KEY = "VITALITYSCRIPTSISTHEBEST67" -- Change this whenever you want
+local KEY_DURATION_HOURS = 24 -- 1 day = 24 hours
+local DISCORD_LINK = "https://discord.gg/eQHcBBg9v6"
+-- ================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- ==================== KEY SYSTEM ====================
+
+local function getKeyFilePath()
+    return "VitalityScripts_KeyData_" .. tostring(LocalPlayer.UserId)
+end
+
+local function saveKeyData(key, timestamp)
+    local data = {
+        key = key,
+        timestamp = timestamp
+    }
+    local success, err = pcall(function()
+        writefile(getKeyFilePath() .. ".json", HttpService:JSONEncode(data))
+    end)
+    return success
+end
+
+local function loadKeyData()
+    local success, result = pcall(function()
+        local content = readfile(getKeyFilePath() .. ".json")
+        return HttpService:JSONDecode(content)
+    end)
+    if success and result then
+        return result
+    end
+    return nil
+end
+
+local function isKeyValid()
+    local data = loadKeyData()
+    if not data then return false end
+    
+    if data.key ~= VALID_KEY then
+        return false
+    end
+    
+    local currentTime = os.time()
+    local elapsedHours = (currentTime - data.timestamp) / 3600
+    
+    if elapsedHours >= KEY_DURATION_HOURS then
+        pcall(function()
+            delfile(getKeyFilePath() .. ".json")
+        end)
+        return false
+    end
+    
+    return true
+end
+
+local function validateKey(inputKey)
+    if inputKey == VALID_KEY then
+        saveKeyData(inputKey, os.time())
+        return true
+    end
+    return false
+end
+
+-- ==================== KEY GUI ====================
+
+local keyGuiActive = true
+
+pcall(function()
+    if CoreGui:FindFirstChild("VitalityScripts_Key") then
+        CoreGui.VitalityScripts_Key:Destroy()
+    end
+    if CoreGui:FindFirstChild("VitalityScripts") then
+        CoreGui.VitalityScripts:Destroy()
+    end
+    if CoreGui:FindFirstChild("Stellar") then
+        CoreGui.Stellar:Destroy()
+    end
+end)
+
+local keyGui = Instance.new("ScreenGui")
+keyGui.Name = "VitalityScripts_Key"
+keyGui.ResetOnSpawn = false
+keyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+keyGui.Parent = CoreGui
+
+local keyMain = Instance.new("Frame")
+keyMain.Name = "KeyMain"
+keyMain.Size = UDim2.new(0, 420, 0, 300)
+keyMain.Position = UDim2.new(0.5, -210, 0.5, -150)
+keyMain.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+keyMain.BorderSizePixel = 0
+keyMain.Parent = keyGui
+
+Instance.new("UICorner", keyMain).CornerRadius = UDim.new(0, 14)
+
+local keyShadow = Instance.new("ImageLabel")
+keyShadow.BackgroundTransparency = 1
+keyShadow.Image = "rbxassetid://1316045217"
+keyShadow.ImageColor3 = Color3.new(0, 0, 0)
+keyShadow.ImageTransparency = 0.4
+keyShadow.ScaleType = Enum.ScaleType.Slice
+keyShadow.SliceCenter = Rect.new(10, 10, 118, 118)
+keyShadow.Size = UDim2.new(1, 40, 1, 40)
+keyShadow.Position = UDim2.new(0, -20, 0, -20)
+keyShadow.ZIndex = -1
+keyShadow.Parent = keyMain
+
+local keyStroke = Instance.new("UIStroke")
+keyStroke.Color = Color3.fromRGB(240, 240, 240)
+keyStroke.Thickness = 1
+keyStroke.Transparency = 0.5
+keyStroke.Parent = keyMain
+
+-- ==================== TITLE BAR (with close & minimize) ====================
+
+local keyTop = Instance.new("Frame")
+keyTop.Size = UDim2.new(1, 0, 0, 40)
+keyTop.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+keyTop.BorderSizePixel = 0
+keyTop.Parent = keyMain
+Instance.new("UICorner", keyTop).CornerRadius = UDim.new(0, 14)
+
+local topMask = Instance.new("Frame")
+topMask.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+topMask.BorderSizePixel = 0
+topMask.Size = UDim2.new(1, 0, 0, 14)
+topMask.Position = UDim2.new(0, 0, 1, -14)
+topMask.Parent = keyTop
+
+local keyTitleBar = Instance.new("TextLabel")
+keyTitleBar.BackgroundTransparency = 1
+keyTitleBar.Size = UDim2.new(1, -80, 1, 0)
+keyTitleBar.Position = UDim2.new(0, 16, 0, 0)
+keyTitleBar.Font = Enum.Font.GothamBold
+keyTitleBar.Text = "VITALITY SCRIPTS"
+keyTitleBar.TextSize = 16
+keyTitleBar.TextColor3 = Color3.fromRGB(240, 240, 240)
+keyTitleBar.TextXAlignment = Enum.TextXAlignment.Left
+keyTitleBar.Parent = keyTop
+
+local function makeTopBtn(text, xOffset, color)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 28, 0, 28)
+    btn.Position = UDim2.new(1, xOffset, 0.5, -14)
+    btn.BackgroundColor3 = color or Color3.fromRGB(55, 55, 55)
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    btn.AutoButtonColor = false
+    btn.Parent = keyTop
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+    return btn
+end
+
+local keyMinimize = makeTopBtn("_", -66)
+local keyClose = makeTopBtn("X", -34, Color3.fromRGB(180, 60, 60))
+
+keyMinimize.MouseEnter:Connect(function()
+    TweenService:Create(keyMinimize, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(240, 240, 240), TextColor3 = Color3.fromRGB(10, 10, 10)}):Play()
+end)
+keyMinimize.MouseLeave:Connect(function()
+    TweenService:Create(keyMinimize, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(55, 55, 55), TextColor3 = Color3.fromRGB(240, 240, 240)}):Play()
+end)
+
+keyClose.MouseEnter:Connect(function()
+    TweenService:Create(keyClose, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(220, 90, 90)}):Play()
+end)
+keyClose.MouseLeave:Connect(function()
+    TweenService:Create(keyClose, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(180, 60, 60)}):Play()
+end)
+
+keyClose.MouseButton1Click:Connect(function()
+    TweenService:Create(keyMain, TweenInfo.new(0.16), {Size = UDim2.new(0, 420, 0, 0)}):Play()
+    task.wait(0.16)
+    keyGui:Destroy()
+    keyGuiActive = false
+end)
+
+local keyMinimized = false
+keyMinimize.MouseButton1Click:Connect(function()
+    keyMinimized = not keyMinimized
+    if keyMinimized then
+        TweenService:Create(keyMain, TweenInfo.new(0.18), {Size = UDim2.new(0, 420, 0, 40)}):Play()
+    else
+        TweenService:Create(keyMain, TweenInfo.new(0.18), {Size = UDim2.new(0, 420, 0, 300)}):Play()
+    end
+end)
+
+-- ==================== DRAGGING ====================
+
+local dragging = false
+local dragStart
+local startPos
+
+keyTop.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = keyMain.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        keyMain.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- ==================== KEY INPUT AREA ====================
+
+local keySub = Instance.new("TextLabel")
+keySub.BackgroundTransparency = 1
+keySub.Size = UDim2.new(1, 0, 0, 20)
+keySub.Position = UDim2.new(0, 0, 0, 55)
+keySub.Font = Enum.Font.Gotham
+keySub.Text = "Enter your key to continue"
+keySub.TextSize = 13
+keySub.TextColor3 = Color3.fromRGB(120, 120, 120)
+keySub.Parent = keyMain
+
+local keyBox = Instance.new("TextBox")
+keyBox.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
+keyBox.Size = UDim2.new(1, -40, 0, 40)
+keyBox.Position = UDim2.new(0, 20, 0, 85)
+keyBox.Font = Enum.Font.GothamBold
+keyBox.PlaceholderText = "Enter Key..."
+keyBox.Text = ""
+keyBox.TextSize = 14
+keyBox.TextColor3 = Color3.fromRGB(240, 240, 240)
+keyBox.ClearTextOnFocus = false
+keyBox.Parent = keyMain
+Instance.new("UICorner", keyBox).CornerRadius = UDim.new(0, 8)
+
+local keyBoxStroke = Instance.new("UIStroke")
+keyBoxStroke.Color = Color3.fromRGB(55, 55, 55)
+keyBoxStroke.Thickness = 1
+keyBoxStroke.Parent = keyBox
+
+local submitBtn = Instance.new("TextButton")
+submitBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
+submitBtn.Size = UDim2.new(1, -40, 0, 40)
+submitBtn.Position = UDim2.new(0, 20, 0, 138)
+submitBtn.Font = Enum.Font.GothamBold
+submitBtn.Text = "SUBMIT"
+submitBtn.TextSize = 14
+submitBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
+submitBtn.AutoButtonColor = false
+submitBtn.Parent = keyMain
+Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0, 8)
+
+-- ==================== DISCORD BUTTON ====================
+
+local discordBtn = Instance.new("TextButton")
+discordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+discordBtn.Size = UDim2.new(1, -40, 0, 40)
+discordBtn.Position = UDim2.new(0, 20, 0, 190)
+discordBtn.Font = Enum.Font.GothamBold
+discordBtn.Text = "JOIN DISCORD FOR KEY!"
+discordBtn.TextSize = 14
+discordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+discordBtn.AutoButtonColor = false
+discordBtn.Parent = keyMain
+Instance.new("UICorner", discordBtn).CornerRadius = UDim.new(0, 8)
+
+discordBtn.MouseEnter:Connect(function()
+    TweenService:Create(discordBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(110, 125, 255)}):Play()
+end)
+discordBtn.MouseLeave:Connect(function()
+    TweenService:Create(discordBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(88, 101, 242)}):Play()
+end)
+
+discordBtn.MouseButton1Click:Connect(function()
+    -- Try to copy to clipboard first
+    pcall(function()
+        setclipboard(DISCORD_LINK)
+    end)
+    -- Also try to open via request
+    pcall(function()
+        local req = (syn and syn.request) or (http and http.request) or request
+        if req then
+            req({
+                Url = "http://127.0.0.1:6463/rpc?v=1",
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json",
+                    ["Origin"] = "https://discord.com"
+                },
+                Body = HttpService:JSONEncode({
+                    cmd = "INVITE_BROWSER",
+                    args = {code = "eQHcBBg9v6"},
+                    nonce = HttpService:GenerateGUID(false)
+                })
+            })
+        end
+    end)
+    -- Fallback: open in browser
+    pcall(function()
+        local req = (syn and syn.request) or (http and http.request) or request
+        if req then
+            req({
+                Url = DISCORD_LINK,
+                Method = "GET"
+            })
+        end
+    end)
+end)
+
+-- ==================== STATUS TEXT ====================
+
+local statusText = Instance.new("TextLabel")
+statusText.BackgroundTransparency = 1
+statusText.Size = UDim2.new(1, 0, 0, 20)
+statusText.Position = UDim2.new(0, 0, 0, 240)
+statusText.Font = Enum.Font.Gotham
+statusText.Text = ""
+statusText.TextSize = 12
+statusText.TextColor3 = Color3.fromRGB(220, 90, 90)
+statusText.Parent = keyMain
+
+-- ==================== HOVER EFFECTS ====================
+
+submitBtn.MouseEnter:Connect(function()
+    TweenService:Create(submitBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(240, 240, 240), TextColor3 = Color3.fromRGB(10, 10, 10)}):Play()
+end)
+submitBtn.MouseLeave:Connect(function()
+    TweenService:Create(submitBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(26, 26, 26), TextColor3 = Color3.fromRGB(240, 240, 240)}):Play()
+end)
+
+keyBox.Focused:Connect(function()
+    TweenService:Create(keyBoxStroke, TweenInfo.new(0.12), {Color = Color3.fromRGB(240, 240, 240)}):Play()
+end)
+keyBox.FocusLost:Connect(function()
+    TweenService:Create(keyBoxStroke, TweenInfo.new(0.12), {Color = Color3.fromRGB(55, 55, 55)}):Play()
+end)
+
+-- ==================== CHECK ALREADY VALID ====================
+
+if isKeyValid() then
+    keyGui:Destroy()
+    keyGuiActive = false
+    loadstring([[
+        -- Auto-load main script if key is valid
+    ]])()
+end
+
+-- ==================== MAIN SCRIPT ====================
+
+local function loadMainScript()
+    if keyGuiActive then
+        TweenService:Create(keyMain, TweenInfo.new(0.2), {Size = UDim2.new(0, 420, 0, 0)}):Play()
+        task.wait(0.2)
+        keyGui:Destroy()
+        keyGuiActive = false
+    end
+
+    local orbFolder = workspace:FindFirstChild("orbFolder")
+    local cityFolder = orbFolder and orbFolder:FindFirstChild("City")
+
+    local insta_gem = false
+    local insta_orb = false
+    local insta_red = false
+    local insta_rebirth = false
+    local orb_choice = "Blue Orb"
+
+    local function getOrb(name)
+        if not cityFolder then return nil end
+        local byName = cityFolder:FindFirstChild(name)
+        if byName then return byName end
+        if name == "Blue Orb" then
+            return cityFolder:GetChildren()[45]
+        end
+        return nil
+    end
+
+    local function getRoot()
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        return char:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function getOrbPosition(orb)
+        if orb:IsA("BasePart") then
+            return orb.Position
+        elseif orb:IsA("Model") then
+            return (orb.PrimaryPart and orb.PrimaryPart.Position) or orb:GetPivot().Position
+        end
+        return nil
+    end
+
+    -- ==================== STELLAR UI ====================
+
+    local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sametexe001/sametlibs/refs/heads/main/Stellar/Library.lua"))()
+
+    local Window = Library:Window({Name = "Vitality Scripts", SubName = "Game Panel", Logo = "rbxassetid://81441172534384"})
+    local Watermark = Library:Watermark("Vitality Scripts | v1.0", "rbxassetid://81441172534384")
+
+    local GamePage = Window:Page({Name = "Game", Icon = "rbxassetid://72196061405823"})
+    local SettingsPage = Window:Page({Name = "Settings", Icon = "rbxassetid://72196061405823"})
+    local CreditsPage = Window:Page({Name = "Credits", Icon = "rbxassetid://72196061405823"})
+
+    Library:CreateSettingsPage(Window, Watermark)
+
+    -- ==================== GAME PAGE ====================
+
+    local FarmingSection = GamePage:Section({Name = "Farming", Side = 1})
+
+    FarmingSection:Toggle({
+        Name = "Insta Gem",
+        Flag = "InstaGem",
+        Callback = function(Value)
+            insta_gem = Value
+        end
+    })
+
+    FarmingSection:Dropdown({
+        Name = "Orb Target",
+        Flag = "OrbTarget",
+        Items = {"Blue Orb", "Orange Orb", "Red Orb"},
+        Default = "Blue Orb",
+        Multi = false,
+        Callback = function(Value)
+            orb_choice = Value
+        end
+    })
+
+    FarmingSection:Toggle({
+        Name = "SAFE ORB",
+        Flag = "SafeOrb",
+        Callback = function(Value)
+            insta_orb = Value
+        end
+    })
+
+    FarmingSection:Toggle({
+        Name = "Insta +40",
+        Flag = "InstaPlus40",
+        Callback = function(Value)
+            insta_red = Value
+        end
+    })
+
+    FarmingSection:Toggle({
+        Name = "Insta Rebirth",
+        Flag = "InstaRebirth",
+        Callback = function(Value)
+            insta_rebirth = Value
+        end
+    })
+
+    -- Auto Open Section
+    local AutoOpenSection = GamePage:Section({Name = "Auto Open", Side = 2})
+
+    AutoOpenSection:Textbox({
+        Name = "Red Crystal Amount",
+        Placeholder = "1",
+        Numeric = true,
+        Finished = true,
+        Flag = "RedCrystalAmount",
+        Callback = function(Value) end
+    })
+
+    AutoOpenSection:Button({
+        Name = "Oepn Red Crystal (300 Gems)",
+        Callback = function()
+            local qty = tonumber(Library.Flags["RedCrystalAmount"].Value) or 1
+            if qty < 1 then qty = 1 end
+            for i = 1, qty do
+                pcall(function()
+                    ReplicatedStorage.rEvents.openCrystalRemote:InvokeServer("openCrystal", "Red Crystal")
+                end)
+                if i < qty then task.wait(0.03) end
+            end
+        end
+    })
+
+    AutoOpenSection:Textbox({
+        Name = "Blue Crystal Amount",
+        Placeholder = "1",
+        Numeric = true,
+        Finished = true,
+        Flag = "BlueCrystalAmount",
+        Callback = function(Value) end
+    })
+
+    AutoOpenSection:Button({
+        Name = "Open Blue Crystal (600 Gems)",
+        Callback = function()
+            local qty = tonumber(Library.Flags["BlueCrystalAmount"].Value) or 1
+            if qty < 1 then qty = 1 end
+            for i = 1, qty do
+                pcall(function()
+                    ReplicatedStorage.rEvents.openCrystalRemote:InvokeServer("openCrystal", "Blue Crystal")
+                end)
+                if i < qty then task.wait(0.03) end
+            end
+        end
+    })
+
+    -- ==================== SETTINGS PAGE ====================
+
+    local ClientSection = SettingsPage:Section({Name = "Client", Side = 1})
+
+    local Lighting = game:GetService("Lighting")
+
+    local savedLighting = {
+        GlobalShadows = Lighting.GlobalShadows,
+        FogEnd = Lighting.FogEnd,
+        Brightness = Lighting.Brightness,
+    }
+
+    ClientSection:Toggle({
+        Name = "Performance Mode",
+        Flag = "PerformanceMode",
+        Callback = function(Value)
+            pcall(function()
+                if Value then
+                    Lighting.GlobalShadows = false
+                    Lighting.FogEnd = 100000
+                    for _, inst in ipairs(Lighting:GetChildren()) do
+                        if inst:IsA("BlurEffect") or inst:IsA("ColorCorrectionEffect")
+                            or inst:IsA("BloomEffect") or inst:IsA("SunRaysEffect")
+                            or inst:IsA("DepthOfFieldEffect") then
+                            inst.Enabled = false
+                        end
+                    end
+                    for _, inst in ipairs(workspace:GetDescendants()) do
+                        if inst:IsA("ParticleEmitter") or inst:IsA("Trail") or inst:IsA("Smoke") or inst:IsA("Fire") then
+                            inst.Enabled = false
+                        end
+                    end
+                    pcall(function()
+                        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+                    end)
+                else
+                    Lighting.GlobalShadows = savedLighting.GlobalShadows
+                    Lighting.FogEnd = savedLighting.FogEnd
+                    for _, inst in ipairs(Lighting:GetChildren()) do
+                        if inst:IsA("BlurEffect") or inst:IsA("ColorCorrectionEffect")
+                            or inst:IsA("BloomEffect") or inst:IsA("SunRaysEffect")
+                            or inst:IsA("DepthOfFieldEffect") then
+                            inst.Enabled = true
+                        end
+                    end
+                    for _, inst in ipairs(workspace:GetDescendants()) do
+                        if inst:IsA("ParticleEmitter") or inst:IsA("Trail") or inst:IsA("Smoke") or inst:IsA("Fire") then
+                            inst.Enabled = true
+                        end
+                    end
+                    pcall(function()
+                        settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+                    end)
+                end
+            end)
+        end
+    })
+
+    -- ==================== CREDITS PAGE ====================
+
+    local CreditsSection = CreditsPage:Section({Name = "Info", Side = 1})
+
+    CreditsSection:Label("Vitality Scripts v1.0")
+    CreditsSection:Label("Game ID: 3101667897")
+    CreditsSection:Label("Only Contributor: zyvaq (me)")
+
+    -- ==================== LOOPS ====================
+
+    local gemConnection = RunService.Heartbeat:Connect(function()
+        if insta_gem then
+            pcall(function()
+                ReplicatedStorage.rEvents.orbEvent:FireServer("collectOrb", "Gem", "City")
+            end)
+        end
+    end)
+
+    local redConnection = RunService.Heartbeat:Connect(function()
+        if insta_red then
+            pcall(function()
+                ReplicatedStorage.rEvents.orbEvent:FireServer("collectOrb", "Red Orb", "City")
+            end)
+        end
+    end)
+
+    local rebirthConnection = RunService.Heartbeat:Connect(function()
+        if insta_rebirth then
+            pcall(function()
+                ReplicatedStorage.rEvents.rebirthEvent:FireServer("rebirthRequest")
+            end)
+        end
+    end)
+
+    local orbConnection = RunService.Heartbeat:Connect(function()
+        if insta_orb then
+            pcall(function()
+                local orb = getOrb(orb_choice)
+                local root = getRoot()
+                if orb and root then
+                    local pos = getOrbPosition(orb)
+                    if pos then
+                        root.CFrame = CFrame.new(pos)
+                    end
+                end
+            end)
+        end
+    end)
+
+    CoreGui.ChildRemoved:Connect(function(child)
+        if child.Name == "Stellar" then
+            if gemConnection then gemConnection:Disconnect() end
+            if redConnection then redConnection:Disconnect() end
+            if rebirthConnection then rebirthConnection:Disconnect() end
+            if orbConnection then orbConnection:Disconnect() end
+        end
+    end)
+end
+
+-- ==================== KEY SUBMIT HANDLER ====================
+
+submitBtn.MouseButton1Click:Connect(function()
+    local input = keyBox.Text:gsub("%s+", "")
+    if input == "" then
+        statusText.Text = "Please enter a key"
+        return
+    end
+    
+    if validateKey(input) then
+        TweenService:Create(keyMain, TweenInfo.new(0.2), {Size = UDim2.new(0, 420, 0, 0)}):Play()
+        task.wait(0.2)
+        loadMainScript()
+    else
+        statusText.Text = "Invalid key! Please try again."
+        keyBox.Text = ""
+        TweenService:Create(keyBoxStroke, TweenInfo.new(0.1), {Color = Color3.fromRGB(220, 90, 90)}):Play()
+        task.wait(0.3)
+        TweenService:Create(keyBoxStroke, TweenInfo.new(0.1), {Color = Color3.fromRGB(55, 55, 55)}):Play()
+    end
+end)
+
+keyBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        submitBtn.MouseButton1Click:Fire()
+    end
+end)
+
+-- If key already valid, load immediately
+if isKeyValid() then
+    loadMainScript()
+end
